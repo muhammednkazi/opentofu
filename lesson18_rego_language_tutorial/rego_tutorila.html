@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Rego + OPA + OpenTofu + AWS – Beginner Tutorial</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            line-height: 1.6;
+            background: #f7f7f9;
+            color: #222;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: #1f3a93;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 0.25rem;
+            margin-top: 2rem;
+        }
+
+        code {
+            font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 0.95rem;
+        }
+
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 0.9rem 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            margin: 0.75rem 0 1rem 0;
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #eef;
+            color: #334;
+            margin-right: 0.35rem;
+            text-transform: uppercase;
+        }
+
+        .tip {
+            border-left: 4px solid #27ae60;
+            padding: 0.4rem 0.75rem;
+            background: #ecf9f1;
+            font-size: 0.9rem;
+            margin: 0.8rem 0;
+        }
+
+        .note {
+            border-left: 4px solid #f39c12;
+            padding: 0.4rem 0.75rem;
+            background: #fef7e6;
+            font-size: 0.9rem;
+            margin: 0.8rem 0;
+        }
+
+        .exercise {
+            border-left: 4px solid #8e44ad;
+            padding: 0.4rem 0.75rem;
+            background: #f6f0fb;
+            font-size: 0.9rem;
+            margin: 0.8rem 0;
+        }
+
+        ul {
+            padding-left: 1.3rem;
+        }
+
+        li {
+            margin-bottom: 0.2rem;
+        }
+
+        .small {
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .toc a {
+            text-decoration: none;
+            color: #1f3a93;
+        }
+
+        .toc li {
+            margin-bottom: 0.25rem;
+        }
+
+        /* Simple diagrams */
+        .diagram {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .diagram-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 0.4rem 0.7rem;
+            background: #fff;
+            font-size: 0.85rem;
+            text-align: center;
+            min-width: 110px;
+        }
+
+        .diagram-arrow {
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 700px) {
+            .diagram {
+                flex-direction: column;
+            }
+
+            .diagram-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Rego + OPA + OpenTofu + AWS</h1>
+    <p style="text-align:center; margin-top:0;">
+        From Zero to IaC Policy Checks – Beginner-Friendly Tutorial
+    </p>
+
+    <div class="note">
+        <strong>Who is this for?</strong><br />
+        Trainees who are new to Rego and OPA, and want to use them with
+        <strong>OpenTofu</strong> and <strong>AWS</strong> for simple, practical policy checks.
+    </div>
+
+    <h2>Table of Contents</h2>
+    <ul class="toc">
+        <li><a href="#visual-overview">Quick Visual Overview</a></li>
+
+        <li><a href="#part1">Part 1 – Rego Basics</a></li>
+        <ul>
+            <li><a href="#what-is-opa-rego">1. What are OPA and Rego?</a></li>
+            <li><a href="#rego-basics">2. Rego Basics: Packages, Rules, and Decisions</a></li>
+            <li><a href="#first-policy">3. Your First Rego Policy</a></li>
+            <li><a href="#input-and-data">4. Working with <code>input</code> and <code>data</code></a></li>
+            <li><a href="#conditions">5. Writing Conditions</a></li>
+            <li><a href="#collections">6. Lists and Sets</a></li>
+            <li><a href="#role-based-example">7. Simple Role-Based Access Example</a></li>
+            <li><a href="#how-to-run">8. How to Run and Test Rego</a></li>
+            <li><a href="#practice">9. Practice Exercises</a></li>
+        </ul>
+
+        <li><a href="#part2">Part 2 – Rego + AWS Basics</a></li>
+        <ul>
+            <li><a href="#aws-intro">1. Rego with AWS Config / JSON</a></li>
+            <li><a href="#example1">2. S3 Buckets Must Not Be Public</a></li>
+            <li><a href="#example2">3. EC2 Instance Types by Environment</a></li>
+            <li><a href="#example3">4. Security Group – No SSH to World</a></li>
+            <li><a href="#example4">5. EBS Volumes Must Be Encrypted</a></li>
+            <li><a href="#example5">6. IAM Users Must Have MFA</a></li>
+            <li><a href="#aws-how-to-run">7. How to Run These AWS Examples</a></li>
+        </ul>
+
+        <li><a href="#part3">Part 3 – Rego + OpenTofu + AWS</a></li>
+        <ul>
+            <li><a href="#tofu-intro">1. OpenTofu Plan JSON + Rego</a></li>
+            <li><a href="#workflow1">2. Workflow 1 – Block Public S3 Buckets in Plan</a></li>
+            <li><a href="#workflow2">3. Workflow 2 – EC2 Type by Environment in Plan</a></li>
+            <li><a href="#workflow3">4. Workflow 3 – SG SSH Blocked in Plan</a></li>
+            <li><a href="#workflow4">5. Workflow 4 – EBS Encryption in Plan</a></li>
+            <li><a href="#workflow5">6. Workflow 5 – IAM MFA in Plan</a></li>
+        </ul>
+
+        <li><a href="#part4">Part 4 – CI/CD Automation (GitHub / GitLab / Jenkins)</a></li>
+        <ul>
+            <li><a href="#pipeline-diagram">1. Pipeline Diagram</a></li>
+            <li><a href="#github-actions">2. Example – GitHub Actions</a></li>
+            <li><a href="#gitlab-ci">3. Example – GitLab CI</a></li>
+            <li><a href="#jenkins">4. Example – Jenkins Pipeline (declarative)</a></li>
+            <li><a href="#bundle-policy">5. Aggregating Policies into a Bundle</a></li>
+        </ul>
+    </ul>
+
+    <!-- ========================= -->
+    <!-- Quick Visual Overview    -->
+    <!-- ========================= -->
+
+    <h2 id="visual-overview">Quick Visual Overview</h2>
+
+    <div class="diagram">
+        <div class="diagram-box">Developer<br /><small>Writes OpenTofu IaC</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">OpenTofu<br /><small>tofu plan ➜ plan.json</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">OPA + Rego<br /><small>Validate AWS Rules</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">Decision<br /><small>allow / deny</small></div>
+    </div>
+
+    <p class="small">
+        Idea: <strong>Never apply infrastructure blindly.</strong><br />
+        Always generate a plan JSON with OpenTofu, run Rego policies via OPA, and then decide to allow or block
+        deployment.
+    </p>
+
+    <!-- ========================= -->
+    <!-- Part 1: Rego Basics      -->
+    <!-- ========================= -->
+
+    <h2 id="part1">Part 1 – Rego Basics</h2>
+
+    <h3 id="what-is-opa-rego">1. What are OPA and Rego?</h3>
+    <p>
+        <span class="tag">Concept</span>
+        <strong>OPA</strong> (Open Policy Agent) is a policy engine.<br />
+        <strong>Rego</strong> is the language we use to write the rules (policies) for OPA.
+    </p>
+
+    <p>You can use OPA + Rego to answer questions like:</p>
+    <ul>
+        <li>“Is this user allowed to perform this action?”</li>
+        <li>“Is this Kubernetes deployment safe?”</li>
+        <li>“Is this AWS infrastructure compliant?”</li>
+    </ul>
+
+    <div class="tip">
+        Think of Rego as a <strong>rule sheet</strong> written in code.
+        OPA reads it, takes some <code>input</code> JSON, and returns a decision (<code>true/false</code>,
+        <code>allow/deny</code>, etc.).
+    </div>
+
+    <h3 id="rego-basics">2. Rego Basics: Packages, Rules, and Decisions</h3>
+
+    <h4>2.1 Package</h4>
+    <p>Every Rego file starts with a package name:</p>
+    <pre><code>package example.basic</code></pre>
+
+    <h4>2.2 Rules</h4>
+    <p>A rule has:</p>
+    <ul>
+        <li>a name (e.g. <code>allow</code>)</li>
+        <li>a value (often <code>true</code> / <code>false</code>)</li>
+        <li>optional conditions inside <code>{}</code></li>
+    </ul>
+
+    <pre><code>package example.basic
+
+allow {
+  true
+}</code></pre>
+
+    <p>This rule simply says: <code>allow</code> is <code>true</code>.</p>
+
+    <h4>2.3 Querying</h4>
+    <p>We query OPA like this:</p>
+    <pre><code>data.example.basic.allow</code></pre>
+
+    <div class="exercise">
+        Change the rule body to <code>false</code>.
+        Predict what <code>data.example.basic.allow</code> will return.
+    </div>
+
+    <h3 id="first-policy">3. Your First Rego Policy</h3>
+
+    <p>Policy: “Allow access only during office hours (9 to 17).”</p>
+
+    <pre><code>package example.office
+
+default allow = false   # deny by default
+
+allow {
+  input.hour &gt;= 9
+  input.hour &lt;= 17
+}</code></pre>
+
+    <p>Input:</p>
+    <pre><code>{
+  "hour": 10
+}</code></pre>
+
+    <p>Query: <code>data.example.office.allow</code> → <code>true</code>.</p>
+
+    <p>Input: <code>{"hour": 20}</code> → result: <code>false</code>.</p>
+
+    <h3 id="input-and-data">4. Working with <code>input</code> and <code>data</code></h3>
+
+    <ul>
+        <li><code>input</code> – JSON passed at query time (request, plan, etc.).</li>
+        <li><code>data</code> – other policies / static JSON loaded into OPA.</li>
+    </ul>
+
+    <h4>4.1 Using <code>input</code></h4>
+    <pre><code>{
+  "user": "alice",
+  "role": "admin",
+  "action": "delete"
+}</code></pre>
+
+    <pre><code>package example.input
+
+admin {
+  input.role == "admin"
+}</code></pre>
+
+    <p>Query: <code>data.example.input.admin</code> → <code>true</code>.</p>
+
+    <h4>4.2 Using <code>data</code></h4>
+
+    <pre><code>data = {
+  "service": {
+    "allowed_roles": ["admin", "manager"]
+  }
+}</code></pre>
+
+    <pre><code>package example.data
+
+allowed {
+  some r
+  r := input.role
+  r == data.service.allowed_roles[_]
+}</code></pre>
+
+    <div class="tip">
+        <code>list[_]</code> means “take each element in the list and compare it”.
+    </div>
+
+    <h3 id="conditions">5. Writing Conditions</h3>
+
+    <h4>5.1 Comparisons</h4>
+    <ul>
+        <li><code>==</code>, <code>!=</code></li>
+        <li><code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code></li>
+    </ul>
+
+    <pre><code>package example.compare
+
+is_adult {
+  input.age &gt;= 18
+}</code></pre>
+
+    <h4>5.2 Logical AND / OR</h4>
+
+    <pre><code>package example.logic
+
+# AND
+can_vote {
+  input.age &gt;= 18
+  input.citizen == true
+}
+
+# OR via two rule bodies
+premium_user {
+  input.plan == "gold"
+} {
+  input.plan == "platinum"
+}</code></pre>
+
+    <h3 id="collections">6. Lists and Sets</h3>
+
+    <h4>6.1 Lists</h4>
+    <pre><code>package example.lists
+
+numbers = [1, 2, 3]
+
+contains_three {
+  numbers[_] == 3
+}</code></pre>
+
+    <h4>6.2 Sets</h4>
+    <pre><code>package example.sets
+
+allowed_actions = {"read", "write"}
+
+can_do_action {
+  input.action == allowed_actions[_]
+}</code></pre>
+
+    <div class="exercise">
+        Write <code>is_read_or_write</code> that returns true only if
+        <code>input.action</code> is "read" or "write".
+    </div>
+
+    <h3 id="role-based-example">7. Simple Role-Based Access Example</h3>
+
+    <pre><code>{
+  "user": "alice",
+  "role": "admin",
+  "action": "delete",
+  "resource": "document-123"
+}</code></pre>
+
+    <pre><code>package example.rbac
+
+default allow = false
+
+allowed_roles_for_delete = {"admin", "manager"}
+
+allow {
+  input.action == "delete"
+  input.role == allowed_roles_for_delete[_]
+}</code></pre>
+
+    <div class="exercise">
+        Add a condition that <code>input.resource</code> must start with "document-"
+        using <code>startswith(string, prefix)</code>.
+    </div>
+
+    <h3 id="how-to-run">8. How to Run and Test Rego</h3>
+
+    <h4>OPA Playground</h4>
+    <ol>
+        <li>Search “OPA Playground” and open it.</li>
+        <li>Paste Rego into the <strong>Policy</strong> tab.</li>
+        <li>Paste JSON into the <strong>Input</strong> tab.</li>
+        <li>Query: e.g. <code>data.example.rbac.allow</code>.</li>
+        <li>Click <strong>Evaluate</strong>.</li>
+    </ol>
+
+    <h4>OPA CLI</h4>
+    <ol>
+        <li>Save <code>policy.rego</code> and <code>input.json</code>.</li>
+        <li>Run:
+            <pre><code>opa eval --data policy.rego --input input.json "data.example.rbac.allow"</code></pre>
+        </li>
+    </ol>
+
+    <h3 id="practice">9. Practice Exercises</h3>
+    <ul>
+        <li>Age-based access: <code>allow</code> if <code>input.age &gt;= 21</code>.</li>
+        <li>Allowed countries: set <code>{"IN", "US", "UK"}</code> and allow only those.</li>
+        <li>Roles: viewer/editor/admin with actions read/write/delete; design rules.</li>
+    </ul>
+
+    <hr />
+
+    <!-- ========================= -->
+    <!-- Part 2: Rego + AWS       -->
+    <!-- ========================= -->
+
+    <h2 id="part2">Part 2 – Rego + AWS (Direct JSON)</h2>
+
+    <h3 id="aws-intro">1. Rego with AWS Config / JSON</h3>
+
+    <p>
+        <span class="tag">AWS</span>
+        Often you export AWS configuration as JSON (via APIs, scripts, or Config), then:
+    </p>
+    <ul>
+        <li>Feed it as <code>input</code> to OPA</li>
+        <li>Use Rego to detect violations</li>
+    </ul>
+
+    <div class="tip">
+        These examples treat AWS state as simple JSON inputs for practice.
+    </div>
+
+    <!-- Example 1: S3 -->
+
+    <h3 id="example1">2. S3 Buckets Must Not Be Public</h3>
+
+    <h4>Input (<code>input_s3.json</code>)</h4>
+    <pre><code>{
+  "buckets": [
+    { "name": "app-logs-dev",    "acl": "private" },
+    { "name": "frontend-assets", "acl": "public-read" },
+    { "name": "backups",         "acl": "private" }
+  ]
+}</code></pre>
+
+    <h4>Policy (<code>aws_s3.rego</code>)</h4>
+    <pre><code>package aws.s3
+
+public_buckets[bucket_name] {
+  some i
+  bucket := input.buckets[i]
+  bucket.acl == "public-read"
+  bucket_name := bucket.name
+}
+
+default allow = true
+
+allow {
+  not public_buckets[_]
+}</code></pre>
+
+    <!-- Example 2: EC2 -->
+
+    <h3 id="example2">3. EC2 Instance Types by Environment</h3>
+
+    <h4>Input (<code>input_ec2.json</code>)</h4>
+    <pre><code>{
+  "environment": "dev",
+  "instance_type": "m5.large"
+}</code></pre>
+
+    <h4>Policy (<code>aws_ec2.rego</code>)</h4>
+    <pre><code>package aws.ec2
+
+allowed_types = {
+  "dev":  {"t3.micro", "t3.small"},
+  "prod": {"m5.large", "m5.xlarge"}
+}
+
+default allow = false
+
+allow {
+  env := input.environment
+  it  := input.instance_type
+
+  allowed_types[env]
+  it == allowed_types[env][_]
+}</code></pre>
+
+    <!-- Example 3: SG -->
+
+    <h3 id="example3">4. Security Group – No SSH to World</h3>
+
+    <h4>Input (<code>input_sg.json</code>)</h4>
+    <pre><code>{
+  "security_group_id": "sg-12345",
+  "ingress": [
+    { "from_port": 80,  "to_port": 80,  "cidr": "0.0.0.0/0" },
+    { "from_port": 22,  "to_port": 22,  "cidr": "0.0.0.0/0" },
+    { "from_port": 443, "to_port": 443, "cidr": "10.0.0.0/16" }
+  ]
+}</code></pre>
+
+    <h4>Policy (<code>aws_sg.rego</code>)</h4>
+    <pre><code>package aws.sg
+
+ssh_open_world[rule] {
+  some i
+  rule := input.ingress[i]
+  rule.cidr == "0.0.0.0/0"
+  rule.from_port == 22
+  rule.to_port == 22
+}
+
+default allow = true
+
+allow {
+  not ssh_open_world[_]
+}</code></pre>
+
+    <!-- Example 4: EBS -->
+
+    <h3 id="example4">5. EBS Volumes Must Be Encrypted</h3>
+
+    <h4>Input (<code>input_ebs.json</code>)</h4>
+    <pre><code>{
+  "volumes": [
+    { "id": "vol-1", "encrypted": true },
+    { "id": "vol-2", "encrypted": false },
+    { "id": "vol-3", "encrypted": true }
+  ]
+}</code></pre>
+
+    <h4>Policy (<code>aws_ebs.rego</code>)</h4>
+    <pre><code>package aws.ebs
+
+unencrypted_volumes[vol_id] {
+  some i
+  vol := input.volumes[i]
+  vol.encrypted == false
+  vol_id := vol.id
+}
+
+default allow = true
+
+allow {
+  not unencrypted_volumes[_]
+}</code></pre>
+
+    <!-- Example 5: IAM MFA -->
+
+    <h3 id="example5">6. IAM Users Must Have MFA</h3>
+
+    <h4>Input (<code>input_iam.json</code>)</h4>
+    <pre><code>{
+  "users": [
+    { "name": "alice", "mfa_enabled": true },
+    { "name": "bob",   "mfa_enabled": false },
+    { "name": "carol", "mfa_enabled": true }
+  ]
+}</code></pre>
+
+    <h4>Policy (<code>aws_iam.rego</code>)</h4>
+    <pre><code>package aws.iam
+
+users_without_mfa[user_name] {
+  some i
+  user := input.users[i]
+  not user.mfa_enabled
+  user_name := user.name
+}
+
+default allow = true
+
+allow {
+  not users_without_mfa[_]
+}</code></pre>
+
+    <h3 id="aws-how-to-run">7. How to Run These AWS Examples</h3>
+    <p>Use the Playground or:</p>
+    <pre><code>opa eval --data aws_s3.rego --input input_s3.json "data.aws.s3.allow"</code></pre>
+
+    <hr />
+
+    <!-- ========================= -->
+    <!-- Part 3: Rego + OpenTofu  -->
+    <!-- ========================= -->
+
+    <h2 id="part3">Part 3 – Rego + OpenTofu + AWS</h2>
+
+    <h3 id="tofu-intro">1. OpenTofu Plan JSON + Rego</h3>
+
+    <p>Typical IAAC + policy workflow:</p>
+    <ol>
+        <li>Write OpenTofu code.</li>
+        <li>Generate a binary plan, then JSON:
+            <pre><code>tofu plan -out=tfplan.bin
+tofu show -json tfplan.bin > plan.json</code></pre>
+        </li>
+        <li>Feed <code>plan.json</code> as <code>input</code> to OPA/Rego.</li>
+    </ol>
+
+    <div class="tip">
+        Rego usually reads from <code>input.resource_changes</code> and <code>change.after</code>
+        in the plan JSON (Terraform/OpenTofu plan structure).
+    </div>
+
+    <!-- Workflow 1 -->
+
+    <h3 id="workflow1">2. Workflow 1 – Prevent Public S3 Buckets in OpenTofu Plan</h3>
+
+    <h4>OpenTofu Example</h4>
+    <pre><code>resource "aws_s3_bucket" "frontend" {
+  bucket = "my-frontend-bucket"
+  acl    = "public-read"
+}</code></pre>
+
+    <h4>Rego Policy (<code>policy_s3.rego</code>)</h4>
+    <pre><code>package tofu.s3
+
+public_buckets[name] {
+  some rc
+  rc := input.resource_changes[_]
+  rc.type == "aws_s3_bucket"
+  rc.change.after.acl == "public-read"
+  name := rc.change.after.bucket
+}
+
+default allow = true
+
+allow {
+  not public_buckets[_]
+}</code></pre>
+
+    <!-- Workflow 2 -->
+
+    <h3 id="workflow2">3. Workflow 2 – EC2 Instance Type by Environment</h3>
+
+    <h4>OpenTofu Variables</h4>
+    <pre><code>variable "environment" {}
+variable "instance_type" {}
+
+resource "aws_instance" "app" {
+  ami           = "ami-123456"
+  instance_type = var.instance_type
+}</code></pre>
+
+    <p>
+        In the generated plan JSON, we assume you can access <code>variables.environment.value</code>
+        and <code>variables.instance_type.value</code> or directly the final instance type in
+        <code>resource_changes</code>.
+    </p>
+
+    <h4>Rego Policy (<code>policy_ec2.rego</code>)</h4>
+    <pre><code>package tofu.ec2
+
+allowed = {
+  "dev":  {"t3.micro", "t3.small"},
+  "prod": {"m5.large", "m5.xlarge"}
+}
+
+default allow = false
+
+allow {
+  some rc
+  rc := input.resource_changes[_]
+  rc.type == "aws_instance"
+
+  env := input.variables.environment.value
+  it  := rc.change.after.instance_type
+
+  it == allowed[env][_]
+}</code></pre>
+
+    <!-- Workflow 3 -->
+
+    <h3 id="workflow3">4. Workflow 3 – Block SG SSH 22 to World</h3>
+
+    <h4>OpenTofu Example</h4>
+    <pre><code>resource "aws_security_group" "web" {
+  name = "web-sg"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}</code></pre>
+
+    <h4>Rego Policy (<code>policy_sg.rego</code>)</h4>
+    <pre><code>package tofu.sg
+
+ssh_open_to_world[sg_name] {
+  some rc
+  rc := input.resource_changes[_]
+  rc.type == "aws_security_group"
+
+  ingress := rc.change.after.ingress[_]
+  ingress.from_port == 22
+  ingress.to_port == 22
+  ingress.cidr_blocks[_] == "0.0.0.0/0"
+
+  sg_name := rc.name
+}
+
+default allow = true
+
+allow {
+  not ssh_open_to_world[_]
+}</code></pre>
+
+    <!-- Workflow 4 -->
+
+    <h3 id="workflow4">5. Workflow 4 – EBS Volumes Must Be Encrypted in Plan</h3>
+
+    <h4>OpenTofu Example</h4>
+    <pre><code>resource "aws_ebs_volume" "data" {
+  size      = 100
+  encrypted = false
+}</code></pre>
+
+    <h4>Rego Policy (<code>policy_ebs.rego</code>)</h4>
+    <pre><code>package tofu.ebs
+
+unencrypted_volumes[name] {
+  some rc
+  rc := input.resource_changes[_]
+  rc.type == "aws_ebs_volume"
+  rc.change.after.encrypted == false
+  name := rc.name
+}
+
+default allow = true
+
+allow {
+  not unencrypted_volumes[_]
+}</code></pre>
+
+    <!-- Workflow 5 -->
+
+    <h3 id="workflow5">6. Workflow 5 – IAM Users Must Have MFA in Plan</h3>
+
+    <h4>OpenTofu Example</h4>
+    <pre><code>resource "aws_iam_user" "dev_user" {
+  name        = "devuser"
+  mfa_enabled = false
+}</code></pre>
+
+    <h4>Rego Policy (<code>policy_iam.rego</code>)</h4>
+    <pre><code>package tofu.iam
+
+users_without_mfa[name] {
+  some rc
+  rc := input.resource_changes[_]
+  rc.type == "aws_iam_user"
+  rc.change.after.mfa_enabled == false
+  name := rc.change.after.name
+}
+
+default allow = true
+
+allow {
+  not users_without_mfa[_]
+}</code></pre>
+
+    <hr />
+
+    <!-- ========================= -->
+    <!-- Part 4: CI/CD Automation -->
+    <!-- ========================= -->
+
+    <h2 id="part4">Part 4 – CI/CD Automation (GitHub / GitLab / Jenkins)</h2>
+
+    <h3 id="pipeline-diagram">1. Pipeline Diagram</h3>
+
+    <div class="diagram">
+        <div class="diagram-box">Push to Git<br /><small>PR / main</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">CI Step 1<br /><small>tofu init / plan</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">CI Step 2<br /><small>tofu show -json</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">CI Step 3<br /><small>opa eval policies</small></div>
+        <div class="diagram-arrow">➜</div>
+        <div class="diagram-box">Result<br /><small>pass = merge / fail = block</small></div>
+    </div>
+
+    <h3>Common Command Pattern</h3>
+
+    <pre><code># 1) Create plan
+tofu plan -out=tfplan.bin
+
+# 2) Convert to JSON
+tofu show -json tfplan.bin > plan.json
+
+# 3) Evaluate with OPA
+opa eval --data policies/ --input plan.json "data.tofu.allow"</code></pre>
+
+    <p>
+        To use <code>data.tofu.allow</code>, we create an aggregator policy that uses all the
+        specific checks (S3, EC2, SG, EBS, IAM).
+    </p>
+
+    <h3 id="bundle-policy">5. Aggregating Policies into a Bundle</h3>
+
+    <h4>Aggregator Policy (<code>policies/main.rego</code>)</h4>
+
+    <pre><code>package tofu
+
+default allow = false
+
+# Call each sub-policy's allow
+allow {
+  data.tofu.s3.allow
+  data.tofu.ec2.allow
+  data.tofu.sg.allow
+  data.tofu.ebs.allow
+  data.tofu.iam.allow
+}</code></pre>
+
+    <p>
+        Now one query (<code>data.tofu.allow</code>) checks all rules together.
+    </p>
+
+    <div class="tip">
+        If you prefer partial passes, you can also return a detailed object:
+        lists of violations per area instead of a single boolean.
+    </div>
+
+    <h3 id="github-actions">2. Example – GitHub Actions</h3>
+
+    <pre><code>name: OpenTofu + Rego Check
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  policy-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        run: |
+          curl -L https://get.opentofu.org/install-opentofu.sh | bash
+
+      - name: Install OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+
+      - name: Generate plan
+        run: |
+          tofu init
+          tofu plan -out=tfplan.bin
+
+      - name: Convert plan to JSON
+        run: tofu show -json tfplan.bin > plan.json
+
+      - name: Run Rego policies
+        run: |
+          opa eval --format=json \
+            --data policies/ \
+            --input plan.json \
+            "data.tofu.allow" | jq '.result[0].expressions[0].value' > result.txt
+
+          if [ "$(cat result.txt)" != "true" ]; then
+            echo "Policy check FAILED"
+            exit 1
+          fi
+
+          echo "Policy check PASSED"</code></pre>
+
+    <h3 id="gitlab-ci">3. Example – GitLab CI</h3>
+
+    <pre><code>stages:
+  - validate
+
+policy_check:
+  image: alpine:3.19
+  stage: validate
+  before_script:
+    - apk add --no-cache curl bash jq
+    # Install OpenTofu
+    - curl -L https://get.opentofu.org/install-opentofu.sh | bash
+    # Install OPA
+    - curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+    - chmod +x opa
+    - mv opa /usr/local/bin/opa
+
+  script:
+    - tofu init
+    - tofu plan -out=tfplan.bin
+    - tofu show -json tfplan.bin > plan.json
+    - |
+      opa eval --format=json \
+        --data policies/ \
+        --input plan.json \
+        "data.tofu.allow" | jq '.result[0].expressions[0].value' > result.txt
+
+      if [ "$(cat result.txt)" != "true" ]; then
+        echo "Policy check FAILED"
+        exit 1
+      fi
+
+      echo "Policy check PASSED"</code></pre>
+
+    <h3 id="jenkins">4. Example – Jenkins (Declarative Pipeline)</h3>
+
+    <pre><code>pipeline {
+  agent any
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Install Tools') {
+      steps {
+        sh '''
+          curl -L https://get.opentofu.org/install-opentofu.sh | bash || true
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa
+          mv opa /usr/local/bin/opa || sudo mv opa /usr/local/bin/opa
+        '''
+      }
+    }
+
+    stage('OpenTofu Plan') {
+      steps {
+        sh '''
+          tofu init
+          tofu plan -out=tfplan.bin
+          tofu show -json tfplan.bin > plan.json
+        '''
+      }
+    }
+
+    stage('Rego Policy Check') {
+      steps {
+        sh '''
+          opa eval --format=json \
+            --data policies/ \
+            --input plan.json \
+            "data.tofu.allow" | jq '.result[0].expressions[0].value' > result.txt
+
+          if [ "$(cat result.txt)" != "true" ]; then
+            echo "Policy check FAILED"
+            exit 1
+          fi
+
+          echo "Policy check PASSED"
+        '''
+      }
+    }
+  }
+}</code></pre>
+
+    <hr />
+
+    <p class="small">
+        You now have:
+    </p>
+    <ul class="small">
+        <li><strong>Part 1</strong> – Rego language basics.</li>
+        <li><strong>Part 2</strong> – Rego with AWS JSON configs.</li>
+        <li><strong>Part 3</strong> – Rego + OpenTofu + AWS plan validation workflows.</li>
+        <li><strong>Part 4</strong> – CI/CD integration (GitHub, GitLab, Jenkins) + diagrams.</li>
+    </ul>
+
+    <p class="small">
+        You can extend this by:
+    <ul class="small">
+        <li>Adding severity labels (<code>critical</code>, <code>warning</code>) instead of one boolean.</li>
+        <li>Returning structured violation reports (objects with <code>resource</code>, <code>reason</code>).</li>
+        <li>Using OPA as a sidecar or REST API for dynamic checks.</li>
+    </ul>
+    </p>
+</body>
+
+</html>
