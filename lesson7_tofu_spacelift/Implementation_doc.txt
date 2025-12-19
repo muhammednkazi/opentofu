@@ -1,6 +1,6 @@
 # OpenTofu + Spacelift Integration: Deploy an EC2 Instance
 
-This tutorial provides a complete, step-by-step guide to integrating OpenTofu with Spacelift and deploying an AWS EC2 instance.
+Provides a complete, step-by-step guide to integrating OpenTofu with Spacelift and deploying an AWS EC2 instance.
 
 ---
 
