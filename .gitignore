@@ -31,3 +31,6 @@ override.tf.json
 #Ignore the ssh & pem keys
 *.pem
 ssh-key-*
+
+awscliv2.zip
+aws
